@@ -1,0 +1,19 @@
+[project]
+name = "compliflow-api"
+version = "0.1.0"
+description = "CompliFlow backend API"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "sqlalchemy",
+    "psycopg[binary]",
+    "redis",
+    "python-dotenv",
+    "cryptography",
+]
+
+[tool.uvicorn]
+factory = false
