@@ -1,0 +1,350 @@
+# CompliFlow  
+# Yellow Network Integration Workflow Development Plan  
+
+---
+
+## 1. Objective
+
+Develop and deploy a working MVP that:
+
+- Integrates Yellow state channels  
+- Uses session keys for delegated execution  
+- Demonstrates off-chain matching  
+- Includes escrow logic  
+- Performs deterministic compliance gating before execution  
+- Deploys on supported testnet → optionally mainnet  
+
+This plan is optimized for:
+
+- Checkpoint #1 → Strategic Alignment  
+- Checkpoint #2 → Yellow Integration  
+- Checkpoint #3 → Demo & Pitch  
+
+---
+
+## 2. Core Integration Philosophy
+
+CompliFlow does not wrap Yellow.
+
+It inserts programmable control into the execution lifecycle.
+
+Control point:
+
+Intent → Policy → Receipt → Match → Escrow → Settlement
+
+CompliFlow sits between:
+
+Session Key  
+and  
+Off-chain match submission  
+
+---
+
+## 3. End-to-End Yellow Integration Workflow
+
+### Step 1: Session Key Creation (Yellow Layer)
+
+User wallet signs to create a session key via Yellow SDK.
+
+Session key parameters:
+- Allowance
+- Expiration
+- Scope (trading)
+- Asset constraints (if supported)
+
+CompliFlow does not create session keys.
+
+It verifies and governs their usage.
+
+---
+
+### Step 2: Intent Submission to CompliFlow
+
+User (or AI agent) submits TradeIntent:
+
+```
+{
+  session_key,
+  wallet,
+  side,
+  amount,
+  price,
+  asset,
+  expires_at,
+  jurisdiction
+}
+```
+
+This occurs before interacting with Yellow matching.
+
+---
+
+### Step 3: Policy Engine Evaluation
+
+CompliFlow performs:
+
+- Amount > 0  
+- Price > 0  
+- Side validation  
+- Asset whitelist validation  
+- Jurisdiction rule enforcement  
+- Session expiry buffer validation  
+- Allowance mirror validation (if implemented)  
+
+Decision:
+
+- PASS → proceed  
+- FAIL → reject  
+
+---
+
+### Step 4: Signed Compliance Receipt
+
+CompliFlow signs:
+
+```
+{
+  intent_hash,
+  decision,
+  timestamp,
+  policy_version
+}
+```
+
+Signed using Ed25519.
+
+Receipt attached to execution payload.
+
+---
+
+### Step 5: Yellow Off-Chain Matching
+
+If PASS:
+
+Order submitted to Yellow state channel.
+
+This demonstrates:
+
+- Off-chain execution  
+- State channel usage  
+- Matching logic  
+
+Matching can be:
+
+- Simple in-memory engine  
+- Or Yellow-integrated if available  
+
+For MVP, a simple matcher is acceptable.
+
+---
+
+### Step 6: Escrow Interaction
+
+When match occurs:
+
+- Escrow entry triggered  
+- Compliance receipt attached  
+- Escrow state validated  
+
+Escrow must demonstrate:
+
+- Funds locked  
+- Conditional release  
+
+This satisfies Yellow’s escrow requirement.
+
+---
+
+### Step 7: Settlement
+
+Settlement flows:
+
+- Off-chain clearing → on-chain custody  
+- Compliance receipt logged  
+- Settlement hash stored  
+
+This closes the lifecycle.
+
+---
+
+## 4. Development Phases
+
+---
+
+### Phase 1 – Local SDK Integration (Days 1–5)
+
+Goal: Prove session key + state channel interaction.
+
+Tasks:
+
+1. Install Yellow SDK  
+2. Connect to Sandbox endpoint  
+3. Create session key manually via wallet  
+4. Build session-key verification endpoint  
+5. Implement preflight validation in CompliFlow  
+
+Deliverable:
+
+- Session key accepted  
+- Intent evaluated  
+- Receipt returned  
+
+---
+
+### Phase 2 – Off-Chain Matching Layer (Days 5–10)
+
+Goal: Demonstrate real matching.
+
+Tasks:
+
+1. Build minimal order book:
+   - Highest bid meets lowest ask  
+2. Connect to Yellow state channel for submission  
+3. Attach compliance receipt to order metadata  
+4. Validate successful match  
+
+Deliverable:
+
+- Two users match  
+- Receipt attached  
+- Match event logged  
+
+---
+
+### Phase 3 – Escrow Integration (Days 10–15)
+
+Goal: Demonstrate escrow logic.
+
+Tasks:
+
+1. Trigger escrow when match occurs  
+2. Validate escrow lock state  
+3. Attach compliance receipt to escrow reference  
+4. Simulate settlement release  
+
+Deliverable:
+
+- Escrow lock shown  
+- Settlement executed  
+- Compliance receipt traceable  
+
+---
+
+### Phase 4 – Authority Governance (Days 15–20)
+
+Goal: Deepen session key integration.
+
+Tasks:
+
+1. Mirror allowance state locally  
+2. Reject orders exceeding allowance  
+3. Reject near-expiry session keys  
+4. Add revocation check stub  
+
+Deliverable:
+
+- Session key misuse blocked  
+- Expiry enforcement shown  
+
+---
+
+### Phase 5 – Deployment & Mainnet (Optional)
+
+Goal: Increase credibility.
+
+Tasks:
+
+1. Deploy to supported testnet (Base Sepolia recommended)  
+2. Switch SDK endpoint  
+3. Demonstrate live session key  
+4. Submit small-value escrow test  
+
+Deliverable:
+
+- Live working demo  
+- Production-like environment  
+
+---
+
+## 5. Yellow Feature Usage Mapping
+
+| Yellow Feature     | Used? | How |
+|-------------------|-------|-----|
+| State Channels     | YES   | Off-chain order matching |
+| Session Keys       | YES   | Delegated execution governance |
+| Escrow Logic       | YES   | Conditional capital locking |
+| Cross-Chain        | NO (MVP) | Reserved for later |
+| Order Book         | Custom | Simple internal matcher |
+
+---
+
+## 6. Demo Script Integration Points
+
+Demo must show:
+
+1. Create session key  
+2. Submit intent  
+3. Compliance PASS  
+4. Signed receipt displayed  
+5. Order matched off-chain  
+6. Escrow locked  
+7. Settlement executed  
+
+Optional:
+
+- FAIL scenario (blocked jurisdiction or expired session key)
+
+This demonstrates system integrity.
+
+---
+
+## 7. Risk Mitigation Plan
+
+To avoid integration failure:
+
+- Develop local mocks first  
+- Integrate SDK in isolated module  
+- Maintain clean separation:
+  - compliance/
+  - yellow/
+  - matching/  
+
+Do not entangle core logic with SDK calls.
+
+---
+
+## 8. Evaluation Alignment
+
+Judges will assess:
+
+Depth of Yellow integration:
+- Meaningful session key usage  
+- Proper state channel interaction  
+- Real escrow logic  
+
+Technical quality:
+- Modular architecture  
+- Deterministic enforcement  
+- Code clarity  
+
+Real-world applicability:
+- Execution-level governance solution  
+- Infrastructure-level positioning  
+
+Clarity:
+- Clear lifecycle explanation  
+- Clean demo narrative  
+
+---
+
+## 9. Final Positioning
+
+CompliFlow is not:
+
+- A trading frontend  
+- A prediction market clone  
+- A thin SDK wrapper  
+
+It is:
+
+A programmable execution control layer that strengthens Yellow’s clearing infrastructure by embedding deterministic governance at the intent layer.
