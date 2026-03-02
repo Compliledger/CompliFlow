@@ -1,4 +1,4 @@
-export interface TradeIntent {
+export type TradeIntent = {
   session_key: string;
   user_wallet: string;
   side: "BUY" | "SELL";
@@ -7,12 +7,4 @@ export interface TradeIntent {
   asset: string;
   expires_at: number;
   jurisdiction?: string;
-}
-
-export interface SignedReceipt {
-  payload: {
-    intent: TradeIntent;
-    decision: string;
-  };
-  signature: string;
-}
+};
