@@ -1,0 +1,394 @@
+# CompliFlow  
+# Frontend Workflow Development Plan (Deep Dive)
+
+This plan defines the frontend build workflow for CompliFlow, optimized for:
+- Yellow Acceleration checkpoints (clarity, integration depth, demo readiness)
+- A fast, reliable demo experience
+- Clear visualization of session keys, intent gating, escrow, and settlement
+- Minimal UI complexity with maximum “judge comprehension”
+
+---
+
+## 0. Frontend Objective
+
+Deliver a frontend that makes the CompliFlow lifecycle *obvious*:
+
+**Connect → Create/Select Session Key → Place Order → Intent Evaluation → Receipt → Off-chain Match → Escrow → Settlement**
+
+The frontend must:
+- Make Yellow concepts visible (session keys, state updates, escrow)
+- Make CompliFlow concepts visible (policy decision + signed receipt)
+- Make failure scenarios easy to demonstrate (non-compliant / at-risk / healthy)
+
+---
+
+## 1. Recommended Frontend Stack
+
+**Framework**
+- Next.js (App Router)
+- TypeScript
+
+**UI**
+- Tailwind CSS
+- shadcn/ui components (optional but recommended)
+
+**Wallet**
+- wagmi + viem (EVM)
+- (If Base Sepolia / Base mainnet: use standard EVM tooling)
+
+**Data / API**
+- TanStack Query (React Query) for API calls + caching
+- Axios or fetch
+
+**State**
+- Zustand (lightweight UI state) OR React Context for MVP
+
+**Real-time**
+- WebSocket client for Yellow events (if exposed)
+- Otherwise polling every 1–2 seconds for MVP
+
+---
+
+## 2. UX Principles (For Yellow Judges)
+
+1. **Always show “Where we are in the lifecycle.”**  
+   Include a top progress bar or timeline.
+
+2. **Make session keys tangible.**  
+   Show allowance, expiry countdown, status (active/revoked/expiring).
+
+3. **Make compliance decision explicit.**  
+   PASS/FAIL with reason code + signed receipt view.
+
+4. **Make escrow + settlement visible.**  
+   Show escrow lock and settlement confirmation hash.
+
+5. **Demo-first design.**  
+   Reduce UI choices; guide user through steps with clear CTAs.
+
+---
+
+## 3. Primary Screens (MVP)
+
+### 3.1 Landing / Overview (`/`)
+Purpose: explain what CompliFlow is in 2 lines + start button.
+
+Components:
+- Project summary
+- “Start Demo” button
+- Supported network indicator (Base Sepolia / Base)
+
+---
+
+### 3.2 Dashboard (`/app`)
+Purpose: Single-page command center for demo.
+
+Layout sections:
+1) **Connection / Network**
+2) **Session Keys**
+3) **Order Entry**
+4) **Compliance Decision**
+5) **Execution Timeline**
+6) **Event Log (optional)**
+
+This “single page demo dashboard” reduces navigation risk during pitch.
+
+---
+
+### 3.3 Receipt Viewer (`/receipts/[id]`)
+Purpose: show the signed compliance receipt.
+
+Displays:
+- Canonical payload JSON (formatted)
+- Signature (base64)
+- Intent hash
+- Verify button (calls backend verify endpoint)
+
+---
+
+### 3.4 Admin / Policy Config (Optional) (`/admin`)
+Purpose: quick toggles for demo scenarios.
+
+Example toggles:
+- Enable jurisdiction block
+- Set max trade size
+- Add denylisted address
+- Set session expiry buffer
+
+This makes demo control easy.
+
+---
+
+## 4. Frontend Data Model (What You Display)
+
+### 4.1 Session Key Card Model
+- key_id
+- status: ACTIVE | EXPIRING | REVOKED | UNKNOWN
+- allowance_total
+- allowance_remaining
+- expires_at
+- scope
+- last_used_at
+
+### 4.2 Trade Intent Model
+- wallet
+- session_key
+- side
+- asset
+- amount
+- price
+- jurisdiction
+- expires_at
+
+### 4.3 Compliance Decision / Receipt Model
+- decision: PASS | FAIL
+- reason_codes: []
+- policy_id
+- policy_version
+- intent_hash
+- issued_at
+- signature
+- receipt_id
+
+### 4.4 Execution State Model (Timeline)
+- ORDER_CREATED
+- INTENT_EVALUATED
+- RECEIPT_SIGNED
+- MATCHED_OFFCHAIN
+- ESCROW_LOCKED
+- SETTLED_ONCHAIN
+
+---
+
+## 5. End-to-End Frontend Workflow (User Journey)
+
+### Step 1: Connect Wallet
+- Detect chain
+- Force network switch to Base Sepolia if needed
+- Show connection status + address
+
+**UI Output:** green “Connected” badge + chain badge
+
+---
+
+### Step 2: Create or Select Session Key (Yellow)
+- Button: “Create Session Key”
+- Form inputs:
+  - allowance (e.g., 500 USDC)
+  - expiry (e.g., 30 minutes)
+- Call Yellow SDK (client-side) OR a backend helper endpoint if needed
+
+**UI Output:** session key card appears with:
+- allowance remaining
+- expiry countdown
+- status ACTIVE
+
+---
+
+### Step 3: Place Order (Order Entry)
+- Choose:
+  - BUY / SELL
+  - amount
+  - price
+  - asset
+- Optional: jurisdiction dropdown for demo (“US”, “EU”, “BLOCKED_REGION”)
+
+Click: **“Evaluate & Submit”**
+
+---
+
+### Step 4: Call CompliFlow Backend (Intent Evaluate)
+Frontend calls:
+`POST /v1/intent/evaluate`
+
+Show:
+- loading state “Evaluating intent…”
+- return decision
+
+**If FAIL**
+- Show red decision card + reason code(s)
+- Timeline stops at INTENT_EVALUATED
+- Provide “Try again” button
+
+**If PASS**
+- Show green decision card
+- Expand receipt preview
+- Continue to matching
+
+---
+
+### Step 5: Off-chain Match + Escrow (Yellow)
+Frontend triggers:
+- “Submit order to Yellow state channel” (client-side SDK call)
+- Wait for match event
+- Show escrow lock
+
+**UI Output:**
+- Timeline updates to MATCHED_OFFCHAIN → ESCROW_LOCKED
+- Show escrow status block with escrow_id and locked amount
+
+---
+
+### Step 6: Settlement (On-chain)
+Frontend triggers:
+- Settle escrow / call custody settlement hook (Yellow-supported flow)
+- Show tx hash + explorer link
+
+**UI Output:**
+- Timeline reaches SETTLED_ONCHAIN
+- “Settlement complete” banner
+
+---
+
+## 6. Demo Scenarios Built Into UI
+
+Add a “Demo Mode” panel with 3 one-click presets:
+
+### 6.1 Healthy Flow (PASS)
+- amount <= limit
+- jurisdiction allowed
+- session key active
+- allowance sufficient
+
+### 6.2 At-Risk Flow (Soft Warning, Still PASS)
+- session key expiring soon (within buffer)
+- or velocity near threshold
+- UI shows amber “AT RISK” badge but execution proceeds
+
+### 6.3 Non-Compliant (FAIL)
+- amount over max
+- jurisdiction BLOCKED_REGION
+- address denylisted
+
+**Important:** “At Risk” should be a separate UI state from FAIL:
+- PASS with warnings
+- This is a key demo differentiator
+
+---
+
+## 7. Frontend Event Log (Optional but Powerful)
+
+Add a right-side “Event Log” panel:
+
+- Timestamp
+- Event type
+- Payload summary
+
+Examples:
+- SESSION_KEY_CREATED
+- INTENT_SUBMITTED
+- POLICY_DECISION_PASS
+- RECEIPT_SIGNED
+- ORDER_SUBMITTED_TO_CHANNEL
+- MATCH_FOUND
+- ESCROW_LOCKED
+- SETTLEMENT_TX_SENT
+
+This makes your demo feel “infra-grade”.
+
+---
+
+## 8. Implementation Phases (Frontend Sprints)
+
+### Phase A (Day 1–2): UI Skeleton + API wiring
+- Layout dashboard
+- Implement wallet connect + chain switch
+- Implement /health check + show backend status
+
+Deliverable: a working shell with connectivity
+
+---
+
+### Phase B (Day 3–5): Intent + Receipt UI
+- Build Order Entry form
+- Integrate /v1/intent/evaluate
+- Show decision cards + reason codes
+- Receipt viewer page
+
+Deliverable: deterministic compliance demo works end-to-end (without Yellow matching)
+
+---
+
+### Phase C (Day 6–9): Session Key UI + Yellow hooks
+- Create/select session key
+- Display allowance + expiry countdown
+- Add “session preflight” UI status
+
+Deliverable: session keys are visible and govern user flow
+
+---
+
+### Phase D (Day 10–14): Matching + Escrow + Settlement visualization
+- Submit order to state channel
+- Display match events
+- Display escrow lock and settlement tx
+
+Deliverable: full lifecycle visible in UI (the judge moment)
+
+---
+
+### Phase E (Day 15+): Demo polish
+- Demo Mode presets (Healthy / At-Risk / Fail)
+- Event log panel
+- Better error messaging
+- Loading states and timeouts
+
+Deliverable: reliable demo video ready
+
+---
+
+## 9. Acceptance Criteria (Frontend “Done” Definition)
+
+Frontend is “done” for Yellow when:
+
+- A new user can connect wallet in <10 seconds
+- Session key creation/selection is visible and intuitive
+- A PASS trade shows receipt + progresses to match/escrow/settlement
+- A FAIL trade is blocked with a clear reason code
+- At-risk conditions display amber warnings (but allow execution)
+- The timeline always reflects state correctly
+- Demo can be executed in 3 minutes without navigation errors
+
+---
+
+## 10. Suggested Frontend Folder Structure (If Needed)
+apps/web/
+app/
+page.tsx
+app/
+page.tsx
+receipts/
+[id]/
+page.tsx
+components/
+SessionKeyCard.tsx
+OrderForm.tsx
+DecisionCard.tsx
+Timeline.tsx
+EventLog.tsx
+DemoModePanel.tsx
+lib/
+api.ts
+yellow.ts
+types.ts
+store.ts
+---
+
+## 11. Deliverables by Checkpoint
+
+### Checkpoint #1 (Strategic Alignment)
+- UI wireframe or early dashboard screenshot
+- Clear journey: Connect → Key → Order → Decision → Receipt
+
+### Checkpoint #2 (Yellow Integration)
+- Live session keys visible
+- Off-chain matching + escrow shown in UI
+- Settlement state shown
+
+### Checkpoint #3 (Pitch)
+- Stable demo path
+- Demo presets (healthy/at-risk/fail)
+- Clean receipts + verification
+- Timeline clarity
+
+---
