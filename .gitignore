@@ -201,6 +201,19 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+next-env.d.ts
+
+# Do not ignore the web app's src/lib source directory
+!apps/web/src/lib/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
