@@ -8,11 +8,18 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "pydantic",
+    "pydantic-settings",
     "sqlalchemy",
     "psycopg[binary]",
     "redis",
     "python-dotenv",
     "cryptography",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx",
+    "pytest",
 ]
 
 [tool.uvicorn]
