@@ -11,26 +11,3 @@ export default function Home() {
     </div>
   );
 }
-
-"use client";
-
-import { useState } from "react";
-import OrderForm from "@/components/OrderForm";
-
-export default function Dashboard() {
-  const [result, setResult] = useState<any>(null);
-
-  return (
-    <div style={{ padding: 40 }}>
-      <h2>CompliFlow Dashboard</h2>
-
-      <OrderForm onResult={(data) => setResult(data)} />
-
-      {result && (
-        <pre style={{ marginTop: 20, background: "#111", padding: 20 }}>
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
