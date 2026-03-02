@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS intents (
+    id SERIAL PRIMARY KEY,
+    data JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS receipts (
+    id SERIAL PRIMARY KEY,
+    data JSONB NOT NULL,
+    signature TEXT
+);
