@@ -62,103 +62,144 @@ export default function OrderForm({
   }
 
   return (
-    <div style={{ display: "grid", gap: 12, maxWidth: 520 }}>
-      <h3 style={{ margin: 0 }}>Order Entry</h3>
+    <div className="glass p-6 rounded-2xl border border-white/10 space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-2xl">📊</span>
+        <h3 className="text-2xl font-display font-bold text-gradient">Order Entry</h3>
+      </div>
 
-      <label style={{ display: "grid", gap: 6 }}>
-        <span>Session Key</span>
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+          <span>🔑</span> Session Key
+        </span>
         <input
           value={sessionKey}
           onChange={(e) => setSessionKey(e.target.value)}
-          placeholder="session key"
-          style={{ padding: 10, borderRadius: 8 }}
+          placeholder="demo-session"
+          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-accent-gold/50 focus:ring-2 focus:ring-accent-gold/20 transition-all outline-none"
         />
       </label>
 
-      <label style={{ display: "grid", gap: 6 }}>
-        <span>Wallet Address</span>
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+          <span>👛</span> Wallet Address
+        </span>
         <input
           value={wallet}
           onChange={(e) => setWallet(e.target.value)}
           placeholder="0x..."
-          style={{ padding: 10, borderRadius: 8 }}
+          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20 transition-all outline-none font-mono"
         />
       </label>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <label style={{ display: "grid", gap: 6, flex: 1 }}>
-          <span>Side</span>
+      <div className="grid grid-cols-3 gap-3">
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+            <span>📈</span> Side
+          </span>
           <select
             value={side}
             onChange={(e) => setSide(e.target.value as "BUY" | "SELL")}
-            style={{ padding: 10, borderRadius: 8 }}
+            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20 transition-all outline-none cursor-pointer"
           >
             <option value="BUY">BUY</option>
             <option value="SELL">SELL</option>
           </select>
         </label>
 
-        <label style={{ display: "grid", gap: 6, flex: 2 }}>
-          <span>Asset</span>
+        <label className="block space-y-2 col-span-2">
+          <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+            <span>💎</span> Asset
+          </span>
           <input
             value={asset}
             onChange={(e) => setAsset(e.target.value)}
             placeholder="ytest.usd"
-            style={{ padding: 10, borderRadius: 8 }}
+            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-accent-gold/50 focus:ring-2 focus:ring-accent-gold/20 transition-all outline-none"
           />
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        <label style={{ display: "grid", gap: 6, flex: 1 }}>
-          <span>Amount</span>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+            <span>💰</span> Amount
+          </span>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            style={{ padding: 10, borderRadius: 8 }}
+            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-accent-gold/50 focus:ring-2 focus:ring-accent-gold/20 transition-all outline-none"
           />
         </label>
 
-        <label style={{ display: "grid", gap: 6, flex: 1 }}>
-          <span>Price</span>
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+            <span>💵</span> Price
+          </span>
           <input
             type="number"
             value={price}
             onChange={(e) => setPrice(Number(e.target.value))}
-            style={{ padding: 10, borderRadius: 8 }}
+            className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:border-accent-gold/50 focus:ring-2 focus:ring-accent-gold/20 transition-all outline-none"
           />
         </label>
       </div>
 
-      <label style={{ display: "grid", gap: 6 }}>
-        <span>Jurisdiction</span>
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-white/80 flex items-center gap-2">
+          <span>🌍</span> Jurisdiction
+        </span>
         <select
           value={jurisdiction}
           onChange={(e) => setJurisdiction(e.target.value)}
-          style={{ padding: 10, borderRadius: 8 }}
+          className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white focus:border-accent-purple/50 focus:ring-2 focus:ring-accent-purple/20 transition-all outline-none cursor-pointer"
         >
-          <option value="US">US</option>
-          <option value="EU">EU</option>
-          <option value="BLOCKED_REGION">BLOCKED_REGION</option>
+          <option value="US">🇺🇸 United States</option>
+          <option value="EU">🇪🇺 European Union</option>
+          <option value="BLOCKED_REGION">🚫 Blocked Region</option>
         </select>
       </label>
 
       <button
         onClick={submit}
         disabled={loading}
-        style={{
-          padding: 12,
-          borderRadius: 10,
-          cursor: loading ? "not-allowed" : "pointer",
-        }}
+        className={`
+          w-full px-6 py-4 mt-2 rounded-xl font-semibold text-lg transition-all duration-300
+          ${loading 
+            ? 'bg-white/10 cursor-not-allowed opacity-50' 
+            : 'bg-gradient-to-r from-accent-yellow to-accent-gold text-black hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,215,0,0.8)] active:scale-[0.98]'
+          }
+          relative overflow-hidden group
+        `}
       >
-        {loading ? "Evaluating..." : "Evaluate & Submit"}
+        <span className="relative z-10 flex items-center justify-center gap-2">
+          {loading ? (
+            <>
+              <span className="animate-spin">⚙️</span>
+              Evaluating...
+            </>
+          ) : (
+            <>
+              <span>🚀</span>
+              Evaluate & Submit Intent
+            </>
+          )}
+        </span>
+        {!loading && (
+          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+        )}
       </button>
 
       {error && (
-        <div style={{ color: "#ff6b6b", fontSize: 14 }}>
-          Error: {error}
+        <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-xl animate-scale-in">
+          <div className="flex items-start gap-2">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <div className="font-semibold text-red-400">Error</div>
+              <div className="text-sm text-red-300/80">{error}</div>
+            </div>
+          </div>
         </div>
       )}
     </div>
