@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.services.yellow_client import yellow_client
+from app.services.session_service import SessionService
+from app.services.audit_service import AuditService
+import uuid
 
 router = APIRouter()
 
@@ -17,24 +20,69 @@ class OrderSubmitRequest(BaseModel):
 
 @router.post("/session/preflight")
 async def session_preflight(body: SessionPreflightRequest):
-    result = await yellow_client.validate_session(body.session_key, body.wallet)
+    is_valid, reason = SessionService.validate_session(
+        session_key=body.session_key,
+        wallet=body.wallet
+    )
     
-    if result.get("error"):
+    if not is_valid:
         return {
             "valid": False,
-            "error": result.get("error"),
-            "message": result.get("message", "Session validation failed")
+            "error": reason,
+            "message": "Session validation failed"
         }
     
+    result = await yellow_client.validate_session(body.session_key, body.wallet)
+    
     return {
-        "valid": result.get("valid", True),
-        "expires_at": result.get("expires_at", 1700000000),
-        "allowance_remaining": result.get("allowance_remaining", 1000),
+        "valid": True,
+        "expires_at": result.get("expires_at", 1800000000),
+        "allowance_remaining": result.get("allowance_remaining", 10000),
+        "session_key": body.session_key,
+        "wallet": body.wallet
     }
 
 
 @router.post("/order/submit")
 async def order_submit(body: OrderSubmitRequest):
+    intent = body.intent
+    receipt = body.receipt
+    
+    session_key = intent.get("session_key")
+    wallet = intent.get("user_wallet") or intent.get("wallet")
+    amount = intent.get("amount", 0)
+    price = intent.get("price", 1)
+    
+    is_valid, reason = SessionService.validate_session(
+        session_key=session_key,
+        wallet=wallet,
+        required_allowance=amount * price
+    )
+    
+    if not is_valid:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Session validation failed",
+                "reason": reason
+            }
+        )
+    
+    success, consume_reason = SessionService.consume_allowance(
+        session_key=session_key,
+        wallet=wallet,
+        amount=amount * price
+    )
+    
+    if not success:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Failed to consume allowance",
+                "reason": consume_reason
+            }
+        )
+    
     order_data = {
         "intent": body.intent,
         "receipt": body.receipt
@@ -51,8 +99,25 @@ async def order_submit(body: OrderSubmitRequest):
             }
         )
     
+    order_id = result.get("order_id", result.get("id"))
+    yellow_order_id = result.get("order_id")
+    
+    AuditService.log_order_submission(
+        order_id=order_id,
+        session_key=session_key,
+        wallet=wallet,
+        yellow_order_id=yellow_order_id
+    )
+    
+    AuditService.log_order_status_change(
+        order_id=order_id,
+        old_status="RECEIPT_SIGNED",
+        new_status="ORDER_SUBMITTED",
+        details=result
+    )
+    
     return {
-        "order_id": result.get("order_id", result.get("id")),
+        "order_id": order_id,
         "status": result.get("status", "SUBMITTED"),
         "details": result
     }
@@ -63,14 +128,29 @@ async def order_status(order_id: str):
     result = await yellow_client.get_order_status(order_id)
     
     if result.get("error"):
+        AuditService.log_event(
+            event_type="ORDER_STATUS_QUERY",
+            status="ERROR",
+            order_id=order_id,
+            details={"error": result.get("error")}
+        )
         return {
             "status": "UNKNOWN",
             "error": result.get("error"),
             "message": result.get("message", "Failed to fetch order status")
         }
     
+    current_status = result.get("status", "SUBMITTED")
+    
+    AuditService.log_event(
+        event_type="ORDER_STATUS_QUERY",
+        status=current_status,
+        order_id=order_id,
+        details=result
+    )
+    
     return {
-        "status": result.get("status", "SUBMITTED"),
+        "status": current_status,
         "details": result
     }
 

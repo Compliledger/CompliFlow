@@ -15,6 +15,9 @@ dependencies = [
     "python-dotenv",
     "cryptography",
     "httpx",
+    "websockets",
+    "eth-account",
+    "web3",
 ]
 
 [project.optional-dependencies]
