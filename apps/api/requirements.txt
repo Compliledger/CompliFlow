@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+sqlalchemy
+python-dotenv
+cryptography
+httpx
+websockets
+eth-account
+web3
+pytest
