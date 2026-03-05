@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { yellowClient } from "@/services/yellowClient";
 
 type SignedReceipt = {
   payload: any;
@@ -44,9 +45,8 @@ export default function OrderForm({
     };
 
     try {
+      // Step 1: Evaluate intent with backend compliance
       const res = await api.post<SignedReceipt>("/v1/intent/evaluate", intent);
-
-      // Your backend returns: { payload: { intent, decision }, signature }
       const decision = res.data?.payload?.decision ?? null;
 
       onResult({
@@ -54,6 +54,22 @@ export default function OrderForm({
         receipt: res.data,
         decision,
       });
+
+      // Step 2: If PASS and Yellow is connected, submit to Yellow Network
+      if (decision?.status === "PASS" && yellowClient.isConnected()) {
+        try {
+          await yellowClient.submitOrder({
+            side,
+            asset,
+            amount: Number(amount),
+            price: Number(price),
+            sessionKey
+          });
+          console.log('✅ Order submitted to Yellow Network!');
+        } catch (yellowErr: any) {
+          console.warn('Yellow Network submission failed (order still processed):', yellowErr.message);
+        }
+      }
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? e?.message ?? "Request failed");
     } finally {

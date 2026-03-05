@@ -4,6 +4,7 @@ import { useState } from "react";
 import OrderForm from "@/components/OrderForm";
 import Link from "next/link";
 import ColorBends from "@/components/ColorBends";
+import YellowConnect from "@/components/YellowConnect";
 
 type FlowStep =
   | "INTENT_SUBMITTED"
@@ -185,6 +186,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      <YellowConnect />
     </div>
   );
 }
