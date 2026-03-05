@@ -5,6 +5,7 @@ from app.routes.intent import router as intent_router
 from app.routes.receipt import router as receipt_router
 from app.routes.yellow import router as yellow_router
 from app.routes.audit import router as audit_router
+from app.routes.credential import router as credential_router
 
 app = FastAPI(title="CompliFlow API", version="0.1.0")
 
@@ -21,3 +22,4 @@ app.include_router(intent_router, prefix="/v1/intent", tags=["intent"])
 app.include_router(receipt_router, prefix="/v1/receipt", tags=["receipt"])
 app.include_router(yellow_router, prefix="/v1/yellow", tags=["yellow"])
 app.include_router(audit_router, prefix="/v1/audit", tags=["audit"])
+app.include_router(credential_router, prefix="/v1/credential", tags=["credential"])
