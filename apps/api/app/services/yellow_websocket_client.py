@@ -23,35 +23,37 @@ class YellowWebSocketClient:
         self.message_handlers: Dict[str, Callable] = {}
         self.pending_requests: Dict[str, asyncio.Future] = {}
         self.request_id_counter = 0
+        self._reconnect_lock = asyncio.Lock()
+        self._should_reconnect = True
         
     async def connect(self) -> bool:
         """Connect to Yellow Network ClearNode"""
         try:
-            logger.info(f"Connecting to Yellow Network: {self.endpoint}")
+            logger.info("Connecting to Yellow Network: %s", self.endpoint)
             self.websocket = await websockets.connect(
                 self.endpoint,
                 extra_headers={
                     "X-Yellow-App-Id": self.app_id,
-                    "X-Yellow-API-Key": self.api_key
-                }
+                    "X-Yellow-API-Key": self.api_key,
+                },
             )
             self.is_connected = True
-            logger.info("✅ Connected to Yellow Network!")
-            
+            self._should_reconnect = True
+            logger.info("Connected to Yellow Network")
             asyncio.create_task(self._message_listener())
-            
             return True
-        except Exception as e:
-            logger.error(f"Failed to connect to Yellow Network: {e}")
+        except Exception as exc:
+            logger.error("Failed to connect to Yellow Network: %s", exc)
             self.is_connected = False
             return False
     
     async def disconnect(self):
-        """Disconnect from Yellow Network"""
+        """Disconnect from Yellow Network (suppresses automatic reconnection)"""
+        self._should_reconnect = False
         if self.websocket:
             await self.websocket.close()
-            self.is_connected = False
-            logger.info("Disconnected from Yellow Network")
+        self.is_connected = False
+        logger.info("Disconnected from Yellow Network")
     
     async def _message_listener(self):
         """Listen for incoming messages from Yellow Network"""
@@ -59,17 +61,64 @@ class YellowWebSocketClient:
             async for message in self.websocket:
                 await self._handle_message(message)
         except websockets.exceptions.ConnectionClosed:
-            logger.warning("Connection to Yellow Network closed")
+            logger.warning("Yellow WebSocket disconnected")
+        except Exception as exc:
+            logger.error("Error in message listener: %s", exc)
+        finally:
             self.is_connected = False
-        except Exception as e:
-            logger.error(f"Error in message listener: {e}")
-            self.is_connected = False
+            self._fail_pending_requests()
+            if self._should_reconnect:
+                asyncio.create_task(self._reconnect_loop())
+
+    def _fail_pending_requests(self) -> None:
+        """Reject all in-flight RPC futures due to connection loss."""
+        if not self.pending_requests:
+            return
+        logger.warning(
+            "Failing %d pending RPC request(s) due to connection loss",
+            len(self.pending_requests),
+        )
+        for future in self.pending_requests.values():
+            if not future.done():
+                future.set_exception(ConnectionError("yellow_connection_lost"))
+        self.pending_requests.clear()
+
+    async def _reconnect_loop(self) -> None:
+        """Attempt to reconnect with exponential backoff: 1s → 2s → 4s → 8s → 16s (max)."""
+        if self._reconnect_lock.locked():
+            return
+
+        async with self._reconnect_lock:
+            delay = 1
+            attempt = 0
+            while not self.is_connected:
+                logger.info(
+                    "Attempting reconnect in %s seconds (attempt %d)", delay, attempt + 1
+                )
+                await asyncio.sleep(delay)
+
+                if not self._should_reconnect:
+                    logger.info("Reconnect cancelled (disconnect was intentional)")
+                    return
+
+                success = await self.connect()
+                if success:
+                    logger.info(
+                        "Reconnected to Yellow Network after %d attempt(s)", attempt + 1
+                    )
+                    return
+
+                attempt += 1
+                delay = min(delay * 2, 16)
+                logger.warning(
+                    "Reconnect attempt %d failed, retrying in %s seconds", attempt, delay
+                )
     
     async def _handle_message(self, raw_message: str):
         """Parse and handle incoming messages"""
         try:
             message = json.loads(raw_message)
-            logger.info(f"📨 Received: {message.get('type', 'unknown')}")
+            logger.debug("Received message type=%s", message.get("type", "unknown"))
             
             message_type = message.get('type')
             request_id = message.get('id')
@@ -81,10 +130,10 @@ class YellowWebSocketClient:
             if message_type in self.message_handlers:
                 await self.message_handlers[message_type](message)
             
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse message: {e}")
-        except Exception as e:
-            logger.error(f"Error handling message: {e}")
+        except json.JSONDecodeError as exc:
+            logger.error("Failed to parse message: %s", exc)
+        except Exception as exc:
+            logger.error("Error handling message: %s", exc)
     
     def on(self, message_type: str, handler: Callable):
         """Register a message handler"""
@@ -109,7 +158,7 @@ class YellowWebSocketClient:
         self.pending_requests[request_id] = future
         
         await self.websocket.send(json.dumps(request))
-        logger.info(f"📤 Sent RPC: {method}")
+        logger.info("Sent RPC: %s", method)
         
         try:
             response = await asyncio.wait_for(future, timeout=30.0)

@@ -22,24 +22,26 @@ class OrderSubmitRequest(BaseModel):
 async def session_preflight(body: SessionPreflightRequest):
     is_valid, reason = SessionService.validate_session(
         session_key=body.session_key,
-        wallet=body.wallet
+        wallet=body.wallet,
     )
-    
+
     if not is_valid:
         return {
             "valid": False,
             "error": reason,
-            "message": "Session validation failed"
+            "message": "Session validation failed",
         }
-    
-    result = await yellow_client.validate_session(body.session_key, body.wallet)
-    
+
+    yellow_result = await yellow_client.validate_session(body.session_key, body.wallet)
+    yellow_available = yellow_result.get("mode") != "error" and yellow_result.get("valid", False)
+
     return {
         "valid": True,
-        "expires_at": result.get("expires_at", 1800000000),
-        "allowance_remaining": result.get("allowance_remaining", 10000),
         "session_key": body.session_key,
-        "wallet": body.wallet
+        "wallet": body.wallet,
+        "expires_at": yellow_result.get("expires_at") if yellow_available else None,
+        "allowance_remaining": yellow_result.get("allowance_remaining") if yellow_available else None,
+        "yellow_status": "available" if yellow_available else "unavailable",
     }
 
 

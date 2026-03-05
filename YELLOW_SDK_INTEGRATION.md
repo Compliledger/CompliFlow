@@ -1,4 +1,3 @@
-# Yellow SDK Integration Guide
 
 ## ✅ Implementation Complete
 
@@ -58,8 +57,8 @@ Based on Yellow SDK `@erc7824/nitrolite`:
 ```python
 ws_client = YellowWebSocketClient(
     endpoint="wss://clearnet-sandbox.yellow.com/ws",
-    app_id="APP-4720-5FF0",
-    api_key="yk_681b3ecc3cd97058..."
+    app_id="YOUR_YELLOW_APP_ID",
+    api_key="YOUR_YELLOW_API_KEY"
 )
 await ws_client.connect()
 ```
@@ -247,8 +246,8 @@ dependencies = [
 
 ### **Environment Variables**
 ```bash
-YELLOW_APP_ID=APP-4720-5FF0
-YELLOW_API_KEY=yk_681b3ecc3cd97058726c7bd8552420410d9c25fae0e846cea3b7169ef3409398
+YELLOW_APP_ID=YOUR_YELLOW_APP_ID
+YELLOW_API_KEY=YOUR_YELLOW_API_KEY
 ```
 
 ### **Railway Deployment**

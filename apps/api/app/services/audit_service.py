@@ -1,7 +1,11 @@
-from app.models.audit_log import AuditLog
-from datetime import datetime
 import hashlib
 import json
+import logging
+from datetime import datetime
+
+from app.models.audit_log import AuditLog
+
+logger = logging.getLogger(__name__)
 
 
 class AuditService:
@@ -13,21 +17,48 @@ class AuditService:
         session_key: str = None,
         wallet: str = None,
         receipt_hash: str = None,
-        details: dict = None
-    ):
+        details: dict = None,
+    ) -> dict:
+        now = datetime.utcnow()
         audit_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": now.isoformat(),
             "event_type": event_type,
             "status": status,
             "order_id": order_id,
             "session_key": session_key,
             "wallet": wallet,
             "receipt_hash": receipt_hash,
-            "details": details or {}
+            "details": details or {},
         }
-        
-        print(f"[AUDIT] {json.dumps(audit_entry, indent=2)}")
-        
+
+        logger.info(
+            "[AUDIT] event=%s status=%s order_id=%s session=%s wallet=%s",
+            event_type,
+            status,
+            order_id,
+            session_key,
+            wallet,
+        )
+
+        try:
+            from app.db.session import get_db
+
+            with get_db() as db:
+                record = AuditLog(
+                    timestamp=now,
+                    event_type=event_type,
+                    status=status,
+                    order_id=order_id,
+                    session_key=session_key,
+                    wallet=wallet,
+                    receipt_hash=receipt_hash,
+                    details=details or {},
+                )
+                db.add(record)
+                db.commit()
+        except Exception as exc:
+            logger.error("Failed to persist audit log to DB: %s", exc)
+
         return audit_entry
     
     @staticmethod

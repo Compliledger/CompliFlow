@@ -1,8 +1,6 @@
 from sqlalchemy import Column, String, Integer, DateTime, Float, Boolean
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
-Base = declarative_base()
+from app.db.base import Base
 
 
 class SessionKey(Base):
