@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-white antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent-yellow via-accent-gold to-accent-amber;
+  }
+  
+  .text-gradient-alt {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent-purple via-accent-pink to-accent-blue;
+  }
+  
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+  
+  .glass-gold {
+    @apply bg-accent-gold/5 backdrop-blur-xl border border-accent-gold/20;
+  }
+  
+  .glow-border {
+    @apply border border-accent-gold/50 shadow-[0_0_20px_rgba(245,200,66,0.3)];
+  }
+  
+  .input-glow:focus {
+    @apply outline-none ring-2 ring-accent-gold/50 border-accent-gold/50;
+  }
+}

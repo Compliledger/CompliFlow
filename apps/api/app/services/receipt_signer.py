@@ -1,18 +1,15 @@
-import json
-import base64
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+"""Compatibility shim.
 
-# For MVP — generate in memory
-private_key = Ed25519PrivateKey.generate()
+Moved to ``app.services.proof.receipt_signer``.
+"""
 
-class ReceiptSigner:
+from app.services.proof.receipt_signer import *  # noqa: F401,F403
+from app.services.proof import receipt_signer as _impl
 
-    @staticmethod
-    def sign(payload: dict) -> dict:
-        message = json.dumps(payload, sort_keys=True).encode()
-        signature = private_key.sign(message)
+# Re-export common module-level attributes that are imported by name
+try:
+    from app.services.proof.receipt_signer import public_key  # noqa: F401
+except ImportError:  # pragma: no cover - public_key may not always exist
+    pass
 
-        return {
-            "payload": payload,
-            "signature": base64.b64encode(signature).decode()
-        }
+__all__ = getattr(_impl, "__all__", [name for name in dir(_impl) if not name.startswith("_")])

@@ -1,0 +1,40 @@
+name: CompliFlow Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/api/requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run integration tests
+        run: |
+          cd apps/api
+          pytest tests/integration -v
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          YELLOW_ENDPOINT: wss://clearnet-sandbox.yellow.com/ws
+          YELLOW_APP_ID: ${{ secrets.YELLOW_APP_ID }}
+          YELLOW_API_KEY: ${{ secrets.YELLOW_API_KEY }}
+          RECEIPT_SIGNING_PRIVATE_KEY_B64: ""
+          RECEIPT_SIGNING_PUBLIC_KEY_B64: ""
