@@ -15,6 +15,9 @@ async def get_audit_logs(
     session_key: Optional[str] = Query(None),
     wallet: Optional[str] = Query(None),
     event_type: Optional[str] = Query(None),
+    event_status: Optional[str] = Query(None),
+    policy_version: Optional[str] = Query(None),
+    proof_hash: Optional[str] = Query(None),
     limit: int = Query(100, le=1000),
 ):
     try:
@@ -28,6 +31,17 @@ async def get_audit_logs(
                 query = query.filter(AuditLog.wallet == wallet)
             if event_type:
                 query = query.filter(AuditLog.event_type == event_type)
+            if event_status:
+                # Match either the legacy ``status`` column or the new
+                # ``event_status`` column so callers can use either name.
+                query = query.filter(
+                    (AuditLog.event_status == event_status)
+                    | (AuditLog.status == event_status)
+                )
+            if policy_version:
+                query = query.filter(AuditLog.policy_version == policy_version)
+            if proof_hash:
+                query = query.filter(AuditLog.proof_hash == proof_hash)
 
             query = query.order_by(AuditLog.timestamp.desc())
             total = query.count()
@@ -42,6 +56,9 @@ async def get_audit_logs(
                 "session_key": session_key,
                 "wallet": wallet,
                 "event_type": event_type,
+                "event_status": event_status,
+                "policy_version": policy_version,
+                "proof_hash": proof_hash,
             },
             "logs": logs,
         }
