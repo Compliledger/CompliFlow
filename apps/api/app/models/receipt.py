@@ -3,6 +3,11 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
+class ReceiptVerifyRequest(BaseModel):
+    payload: dict
+    signature: str
+
+
 class ReceiptRequest(BaseModel):
     data: dict
     signature: str | None = None
