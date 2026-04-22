@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.intent import TradeIntent
 from app.services.policy_engine import PolicyEngine
 from app.services.receipt_signer import ReceiptSigner
+from app.services.proof.store import store_bundle
 from app.services.session_service import SessionService
 from app.services.audit_service import AuditService
 import uuid
@@ -44,14 +45,26 @@ async def evaluate_intent(intent: TradeIntent):
 
     signed_receipt = ReceiptSigner.sign(receipt_payload)
     receipt_hash = AuditService.compute_receipt_hash(receipt_payload)
-    
+
     AuditService.log_intent_evaluation(
         intent=intent.dict(),
         decision=decision,
         receipt_hash=receipt_hash
     )
-    
+
     signed_receipt["receipt_hash"] = receipt_hash
     signed_receipt["order_id"] = f"order_{uuid.uuid4().hex[:12]}"
-    
+
+    # Build and persist a v1.0 proof bundle alongside the legacy payload so
+    # the existing frontend keeps working while new clients can verify the
+    # bundle via /v1/receipt/verify or fetch it via /v1/receipt/{proof_hash}.
+    proof_bundle = ReceiptSigner.create_proof_bundle(
+        decision=decision,
+        wallet=intent.user_wallet,
+        session_key=intent.session_key,
+        intent=intent.dict(),
+    )
+    store_bundle(proof_bundle)
+    signed_receipt["proof_bundle"] = proof_bundle
+
     return signed_receipt
