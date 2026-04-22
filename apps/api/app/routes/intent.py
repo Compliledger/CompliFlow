@@ -10,21 +10,31 @@ router = APIRouter()
 
 @router.post("/evaluate")
 async def evaluate_intent(intent: TradeIntent):
+    required_allowance = intent.amount * intent.price
     is_valid, reason = SessionService.validate_session(
         session_key=intent.session_key,
         wallet=intent.user_wallet,
-        required_allowance=intent.amount * intent.price
+        required_allowance=required_allowance,
     )
-    
+
     if not is_valid:
+        # Preserve previous API behavior: session failures still return 403.
+        # We also surface the policy-engine deny shape inside the detail so
+        # callers migrating to the new format have something consistent.
+        denied = PolicyEngine.evaluate(
+            intent,
+            session_valid=False,
+            session_reason=reason,
+        )
         raise HTTPException(
             status_code=403,
             detail={
                 "error": "Session validation failed",
-                "reason": reason
-            }
+                "reason": reason,
+                "decision": denied,
+            },
         )
-    
+
     decision = PolicyEngine.evaluate(intent)
 
     receipt_payload = {
