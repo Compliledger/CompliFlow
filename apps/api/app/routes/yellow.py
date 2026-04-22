@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.services.yellow_client import yellow_client
 from app.services.session_service import SessionService
 from app.services.audit_service import AuditService
+from app.services.proof.receipt_signer import ReceiptSigner
 import uuid
 
 router = APIRouter()
@@ -49,7 +50,29 @@ async def session_preflight(body: SessionPreflightRequest):
 async def order_submit(body: OrderSubmitRequest):
     intent = body.intent
     receipt = body.receipt
-    
+
+    # Proof bundle is required; if present it must verify before we touch
+    # any session state or downstream venue.
+    proof_bundle = receipt.get("proof_bundle") if isinstance(receipt, dict) else None
+    if not proof_bundle:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "proof_missing",
+                "reason": "Receipt is missing a proof_bundle",
+            },
+        )
+
+    proof_ok, proof_reason = ReceiptSigner.verify_bundle(proof_bundle)
+    if not proof_ok:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "proof_invalid",
+                "reason": proof_reason,
+            },
+        )
+
     session_key = intent.get("session_key")
     wallet = intent.get("user_wallet") or intent.get("wallet")
     amount = intent.get("amount", 0)
