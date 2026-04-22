@@ -1,23 +1,11 @@
-from app.models.intent import TradeIntent
+"""Compatibility shim.
 
-class PolicyEngine:
+The policy engine moved to ``app.services.decision.policy_engine`` as part of
+the CompliFlow enforcement-platform refactor. This module re-exports the
+public API so legacy imports continue to work.
+"""
 
-    @staticmethod
-    def evaluate(intent: TradeIntent) -> dict:
-        # Rule 1: Amount must be positive
-        if intent.amount <= 0:
-            return {"status": "FAIL", "reason": "Invalid amount"}
+from app.services.decision.policy_engine import *  # noqa: F401,F403
+from app.services.decision import policy_engine as _impl
 
-        # Rule 2: Price must be positive
-        if intent.price <= 0:
-            return {"status": "FAIL", "reason": "Invalid price"}
-
-        # Rule 3: Side validation
-        if intent.side not in ["BUY", "SELL"]:
-            return {"status": "FAIL", "reason": "Invalid side"}
-
-        # Rule 4: Jurisdiction block example
-        if intent.jurisdiction == "BLOCKED_REGION":
-            return {"status": "FAIL", "reason": "Jurisdiction restricted"}
-
-        return {"status": "PASS"}
+__all__ = getattr(_impl, "__all__", [name for name in dir(_impl) if not name.startswith("_")])

@@ -1,13 +1,9 @@
-class SessionKeyManager:
+"""Compatibility shim.
 
-    def __init__(self) -> None:
-        self._keys: dict[str, str] = {}
+Moved to ``app.services.session.session_keys``.
+"""
 
-    def create(self, session_id: str, key: str) -> None:
-        self._keys[session_id] = key
+from app.services.session.session_keys import *  # noqa: F401,F403
+from app.services.session import session_keys as _impl
 
-    def get(self, session_id: str) -> str | None:
-        return self._keys.get(session_id)
-
-    def revoke(self, session_id: str) -> None:
-        self._keys.pop(session_id, None)
+__all__ = getattr(_impl, "__all__", [name for name in dir(_impl) if not name.startswith("_")])
