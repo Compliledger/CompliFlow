@@ -6,16 +6,36 @@ import { api } from "@/lib/api";
 type SignedReceipt = {
   payload: any;
   signature: string;
+  receipt_hash?: string;
+  order_id?: string;
+  proof_bundle?: any;
+};
+
+export type DecisionPayload = {
+  // Legacy PASS/FAIL shape (still supported by older flows)
+  status?: string;
+  reason?: string;
+  // New v1 policy-engine shape
+  decision?: "ALLOW" | "DENY" | "ALLOW_WITH_CONDITIONS" | string;
+  reason_codes?: string[];
+  human_reason?: string;
+  conditions?: Record<string, any>;
+  policy_version?: string;
+};
+
+export type OrderFormResult = {
+  intent: any;
+  receipt: SignedReceipt;
+  decision: DecisionPayload | null;
+  proofBundle: any | null;
+  orderId: string | null;
+  submission: { status?: string; details?: any } | null;
 };
 
 export default function OrderForm({
   onResult,
 }: {
-  onResult: (data: {
-    intent: any;
-    receipt: SignedReceipt;
-    decision: { status?: string; reason?: string } | null;
-  }) => void;
+  onResult: (data: OrderFormResult) => void;
 }) {
   const [sessionKey, setSessionKey] = useState("demo-session");
   const [wallet, setWallet] = useState("0x123");
@@ -46,21 +66,32 @@ export default function OrderForm({
     try {
       // Step 1: Evaluate intent — runs policy engine and returns a signed compliance receipt
       const res = await api.post<SignedReceipt>("/v1/intent/evaluate", intent);
-      const decision = res.data?.payload?.decision ?? null;
+      const receipt = res.data;
+      const decision: DecisionPayload | null =
+        receipt?.payload?.decision ?? null;
+      const proofBundle = receipt?.proof_bundle ?? null;
+      const orderId = receipt?.order_id ?? null;
 
-      onResult({
-        intent,
-        receipt: res.data,
-        decision,
-      });
+      // Step 2: Forward to Yellow when the policy engine allows the trade.
+      // Support both the legacy {status:"PASS"} and the v1 ALLOW/ALLOW_WITH_CONDITIONS shapes.
+      const decisionValue =
+        decision?.decision ?? decision?.status ?? "UNKNOWN";
+      const isAllowed =
+        decisionValue === "ALLOW" ||
+        decisionValue === "ALLOW_WITH_CONDITIONS" ||
+        decisionValue === "PASS";
 
-      // Step 2: If PASS, submit to backend which attaches the receipt and forwards to Yellow
-      if (decision?.status === "PASS") {
+      let submission: OrderFormResult["submission"] = null;
+      if (isAllowed) {
         try {
-          await api.post("/v1/yellow/order/submit", {
-            intent,
-            receipt: res.data,
-          });
+          const submitRes = await api.post<{ order_id?: string; status?: string }>(
+            "/v1/yellow/order/submit",
+            { intent, receipt }
+          );
+          submission = {
+            status: submitRes.data?.status,
+            details: submitRes.data,
+          };
           console.log("✅ Order submitted to Yellow Network via backend.");
         } catch (submitErr: any) {
           console.error(
@@ -74,6 +105,15 @@ export default function OrderForm({
           );
         }
       }
+
+      onResult({
+        intent,
+        receipt,
+        decision,
+        proofBundle,
+        orderId: submission?.details?.order_id ?? orderId,
+        submission,
+      });
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? e?.message ?? "Request failed");
     } finally {
