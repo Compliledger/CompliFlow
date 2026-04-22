@@ -122,3 +122,26 @@ class AuditService:
                 "reason": reason
             }
         )
+
+    @staticmethod
+    def log_settlement_validation(
+        order_id: str,
+        decision: dict,
+        execution_status: str = None,
+        intent: dict = None,
+    ):
+        """Persist a settlement validation decision to the audit log."""
+        status = decision.get("decision", "UNKNOWN")
+        wallet = (intent or {}).get("user_wallet")
+        session_key = (intent or {}).get("session_key")
+        return AuditService.log_event(
+            event_type="SETTLEMENT_VALIDATED",
+            status=status,
+            order_id=order_id,
+            session_key=session_key,
+            wallet=wallet,
+            details={
+                "execution_status": execution_status,
+                "decision": decision,
+            },
+        )

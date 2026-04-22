@@ -13,9 +13,19 @@ from app.services.settlement.settlement_service import (
     SettlementStatus,
     SettlementValidationError,
 )
+from app.services.settlement.settlement_engine import (
+    SettlementEngine,
+    DECISION_ALLOW,
+    DECISION_DENY,
+    DECISION_ALLOW_WITH_CONDITIONS,
+)
 
 __all__ = [
     "SettlementService",
     "SettlementStatus",
     "SettlementValidationError",
+    "SettlementEngine",
+    "DECISION_ALLOW",
+    "DECISION_DENY",
+    "DECISION_ALLOW_WITH_CONDITIONS",
 ]
