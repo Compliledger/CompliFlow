@@ -113,7 +113,16 @@ class TestWorkflowIntegration:
         assert "decision" in payload, "Payload missing 'decision' field"
         
         decision = payload["decision"]
-        assert decision.get("status") == "PASS", f"Expected PASS, got {decision.get('status')}"
+        decision_value = decision.get("decision")
+        assert decision_value in ("ALLOW", "ALLOW_WITH_CONDITIONS"), (
+            f"Expected ALLOW or ALLOW_WITH_CONDITIONS, got {decision_value}"
+        )
+        assert "reason_codes" in decision and isinstance(decision["reason_codes"], list)
+        assert "human_reason" in decision and isinstance(decision["human_reason"], str)
+        assert "conditions" in decision and isinstance(decision["conditions"], dict)
+        for key in ("max_notional", "valid_until", "allowed_assets", "allowed_counterparties"):
+            assert key in decision["conditions"], f"conditions missing key: {key}"
+        assert decision.get("policy_version"), "decision missing policy_version"
         
         print("✔ Compliance engine works")
         return data

@@ -134,11 +134,18 @@ export default function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            {data?.decision && (
+            {data?.decision && (() => {
+              const decisionValue = data.decision.decision ?? data.decision.status ?? "UNKNOWN";
+              const isAllowed = decisionValue === "ALLOW" || decisionValue === "ALLOW_WITH_CONDITIONS" || decisionValue === "PASS";
+              const reasonText = data.decision.human_reason
+                ?? (Array.isArray(data.decision.reason_codes) && data.decision.reason_codes.length
+                  ? data.decision.reason_codes.join(", ")
+                  : data.decision.reason);
+              return (
               <div
                 className={`
                   p-6 rounded-2xl border animate-scale-in
-                  ${data.decision.status === "PASS" 
+                  ${isAllowed
                     ? 'bg-gradient-to-br from-accent-yellow/20 to-accent-gold/10 border-accent-yellow/50 shadow-[0_0_30px_rgba(255,215,0,0.3)]' 
                     : 'bg-gradient-to-br from-red-500/20 to-pink-500/10 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]'
                   }
@@ -146,21 +153,22 @@ export default function Dashboard() {
               >
                 <div className="flex items-start gap-3">
                   <span className="text-3xl">
-                    {data.decision.status === "PASS" ? "✅" : "❌"}
+                    {isAllowed ? "✅" : "❌"}
                   </span>
                   <div className="flex-1">
                     <h3 className="text-xl font-bold mb-2">
-                      Decision: {data.decision.status ?? "UNKNOWN"}
+                      Decision: {decisionValue}
                     </h3>
-                    {data.decision.reason && (
+                    {reasonText && (
                       <p className="text-white/80">
-                        <span className="font-semibold">Reason:</span> {data.decision.reason}
+                        <span className="font-semibold">Reason:</span> {reasonText}
                       </p>
                     )}
                   </div>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {data?.receipt && (
               <div className="glass p-6 rounded-2xl border border-white/10 animate-slide-up">

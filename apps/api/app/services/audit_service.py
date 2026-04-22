@@ -68,9 +68,13 @@ class AuditService:
     
     @staticmethod
     def log_intent_evaluation(intent: dict, decision: dict, receipt_hash: str):
+        # ``decision`` follows the enforcement-engine shape:
+        #   {"decision": "ALLOW"|"DENY"|"ALLOW_WITH_CONDITIONS", ...}
+        # Fall back to the legacy ``status`` field for backwards compatibility.
+        status = decision.get("decision") or decision.get("status", "UNKNOWN")
         return AuditService.log_event(
             event_type="INTENT_EVALUATED",
-            status=decision.get("status", "UNKNOWN"),
+            status=status,
             session_key=intent.get("session_key"),
             wallet=intent.get("user_wallet"),
             receipt_hash=receipt_hash,
