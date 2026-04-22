@@ -130,12 +130,17 @@ class ReceiptSigner:
         tomorrow, ...).  The payload that is hashed and signed contains
         everything except ``signature`` / ``public_key`` / ``proof_hash``.
         """
+        if not wallet:
+            raise ValueError("wallet is required to create a proof bundle")
+        if not session_key:
+            raise ValueError("session_key is required to create a proof bundle")
+
         now = int(issued_at if issued_at is not None else time.time())
         expires_at = now + int(ttl_seconds)
 
         intent_hash = hash_object(intent) if intent is not None else hash_object({})
         decision_hash = hash_object(decision)
-        session_key_hash = sha256_hex((session_key or "").encode("utf-8"))
+        session_key_hash = sha256_hex(session_key.encode("utf-8"))
 
         core = {
             "proof_version": proof_version,
@@ -187,8 +192,8 @@ class ReceiptSigner:
         try:
             pub_bytes = base64.b64decode(bundle["public_key"])
             sig_bytes = base64.b64decode(bundle["signature"])
-        except (ValueError, TypeError) as exc:
-            return False, f"invalid_encoding:{exc}"
+        except (ValueError, TypeError):
+            return False, "invalid_encoding"
 
         try:
             verifier = Ed25519PublicKey.from_public_bytes(pub_bytes)
@@ -196,7 +201,8 @@ class ReceiptSigner:
         except InvalidSignature:
             return False, "invalid_signature"
         except Exception as exc:  # malformed key, etc.
-            return False, f"verification_error:{exc}"
+            logger.warning("Proof bundle verification error: %s", exc)
+            return False, "verification_error"
 
         current = int(now if now is not None else time.time())
         if current > int(bundle["expires_at"]):

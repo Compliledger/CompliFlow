@@ -26,8 +26,8 @@ def _verify_legacy_payload(payload: dict, signature_b64: str) -> ProofBundleVeri
     """
     try:
         signature_bytes = base64.b64decode(signature_b64)
-    except (ValueError, TypeError) as exc:
-        return ProofBundleVerifyResponse(valid=False, reason=f"invalid_encoding:{exc}")
+    except (ValueError, TypeError):
+        return ProofBundleVerifyResponse(valid=False, reason="invalid_encoding")
 
     try:
         public_key.verify(signature_bytes, canonicalize(payload))
@@ -36,7 +36,7 @@ def _verify_legacy_payload(payload: dict, signature_b64: str) -> ProofBundleVeri
         return ProofBundleVerifyResponse(valid=False, reason="invalid_signature")
     except Exception as exc:  # pragma: no cover — defensive
         logger.error("Legacy receipt verification error: %s", exc)
-        return ProofBundleVerifyResponse(valid=False, reason=f"verification_error:{exc}")
+        return ProofBundleVerifyResponse(valid=False, reason="verification_error")
 
     return ProofBundleVerifyResponse(valid=True)
 
@@ -81,6 +81,6 @@ def get_receipt(proof_hash: str) -> dict:
     """Return a previously-issued proof bundle by its ``proof_hash``."""
     bundle = get_bundle(proof_hash)
     if bundle is None:
-        raise HTTPException(status_code=404, detail="proof bundle not found")
+        raise HTTPException(status_code=404, detail="Proof bundle not found")
     return bundle
 
