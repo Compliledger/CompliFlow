@@ -7,6 +7,7 @@ from app.routes.receipt import router as receipt_router
 from app.routes.yellow import router as yellow_router
 from app.routes.audit import router as audit_router
 from app.routes.session import router as session_router
+from app.routes.settlement import router as settlement_router
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ app.include_router(receipt_router, prefix="/v1/receipt", tags=["receipt"])
 app.include_router(yellow_router, prefix="/v1/yellow", tags=["yellow"])
 app.include_router(audit_router, prefix="/v1/audit", tags=["audit"])
 app.include_router(session_router, prefix="/v1/session", tags=["session"])
+app.include_router(settlement_router, prefix="/v1/settlement", tags=["settlement"])
 
 
 @app.on_event("startup")
