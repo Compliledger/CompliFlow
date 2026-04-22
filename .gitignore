@@ -234,3 +234,7 @@ venv/
 .mypy_cache/
 .pytest_cache/
 .coverage
+
+# Local SQLite database
+apps/api/compliflow.db
+*.db
