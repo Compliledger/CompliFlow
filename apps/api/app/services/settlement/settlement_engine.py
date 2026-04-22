@@ -135,19 +135,32 @@ def _build_decision(
     }
 
 
+# Internal error tags returned from :func:`_verify_receipt`. Kept as
+# constants so the call-site can reliably translate them into reason codes.
+_RECEIPT_ERR_MISSING = "missing"
+_RECEIPT_ERR_MISSING_FIELDS = "missing_payload_or_signature"
+_RECEIPT_ERR_INVALID_SIGNATURE = "invalid_signature"
+_RECEIPT_ERR_VERIFICATION = "verification_error"
+
+# Error tags that should map to ``RECEIPT_MISSING`` (vs. ``RECEIPT_INVALID``).
+_RECEIPT_MISSING_ERRORS = frozenset(
+    {_RECEIPT_ERR_MISSING, _RECEIPT_ERR_MISSING_FIELDS}
+)
+
+
 def _verify_receipt(receipt: Optional[Dict[str, Any]]) -> tuple[bool, Optional[str]]:
     """Best-effort verification of a signed receipt.
 
-    Returns ``(is_valid, error_message)``. ``error_message`` is ``None`` on
-    success.
+    Returns ``(is_valid, error_tag)``. ``error_tag`` is ``None`` on success
+    and otherwise one of the ``_RECEIPT_ERR_*`` constants.
     """
     if not isinstance(receipt, dict) or not receipt:
-        return False, "missing"
+        return False, _RECEIPT_ERR_MISSING
 
     payload = receipt.get("payload")
     signature = receipt.get("signature")
     if payload is None or not signature:
-        return False, "missing_payload_or_signature"
+        return False, _RECEIPT_ERR_MISSING_FIELDS
 
     try:
         signature_bytes = base64.b64decode(signature)
@@ -155,10 +168,10 @@ def _verify_receipt(receipt: Optional[Dict[str, Any]]) -> tuple[bool, Optional[s
         _receipt_public_key.verify(signature_bytes, message)
         return True, None
     except InvalidSignature:
-        return False, "invalid_signature"
+        return False, _RECEIPT_ERR_INVALID_SIGNATURE
     except Exception as exc:  # pragma: no cover - defensive
         logger.warning("Receipt verification raised unexpected error: %s", exc)
-        return False, f"verification_error: {exc}"
+        return False, _RECEIPT_ERR_VERIFICATION
 
 
 def _compute_proof_hash(proofs: Optional[Dict[str, Any]]) -> Optional[str]:
@@ -209,7 +222,7 @@ class SettlementEngine:
         # Rule 1 & 2: receipt exists and verifies.
         receipt_ok, receipt_error = _verify_receipt(receipt)
         if not receipt_ok:
-            if receipt_error == "missing" or receipt_error == "missing_payload_or_signature":
+            if receipt_error in _RECEIPT_MISSING_ERRORS:
                 deny_codes.append(REASON_RECEIPT_MISSING)
             else:
                 deny_codes.append(REASON_RECEIPT_INVALID)
